@@ -351,8 +351,14 @@ function ItemDialog({
   async function save(event: React.FormEvent) {
     event.preventDefault();
     const priceCents = parseMoneyToCents(price);
-    if (!name.trim()) return toast.error("Name is required");
-    if (priceCents === null) return toast.error("Enter a valid price");
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    if (priceCents === null) {
+      toast.error("Enter a valid price");
+      return;
+    }
 
     setBusy(true);
     try {
