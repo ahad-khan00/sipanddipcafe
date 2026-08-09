@@ -16,7 +16,9 @@ import { Route as MenuRouteImport } from './routes/menu'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as OrderIdRouteImport } from './routes/order.$id'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminMenuRouteImport } from './routes/_authenticated/admin.menu'
 import { Route as AuthenticatedAdminOrdersRouteImport } from './routes/_authenticated/admin.orders'
+import { Route as AuthenticatedAdminTablesRouteImport } from './routes/_authenticated/admin.tables'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,10 +54,21 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminMenuRoute = AuthenticatedAdminMenuRouteImport.update({
+  id: '/admin/menu',
+  path: '/admin/menu',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminOrdersRoute =
   AuthenticatedAdminOrdersRouteImport.update({
     id: '/admin/orders',
     path: '/admin/orders',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminTablesRoute =
+  AuthenticatedAdminTablesRouteImport.update({
+    id: '/admin/tables',
+    path: '/admin/tables',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
@@ -65,7 +78,9 @@ export interface FileRoutesByFullPath {
   '/menu': typeof MenuRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
+  '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/admin/tables': typeof AuthenticatedAdminTablesRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -74,7 +89,9 @@ export interface FileRoutesByTo {
   '/menu': typeof MenuRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
+  '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/admin/tables': typeof AuthenticatedAdminTablesRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -85,7 +102,9 @@ export interface FileRoutesById {
   '/menu': typeof MenuRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
+  '/_authenticated/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/_authenticated/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/_authenticated/admin/tables': typeof AuthenticatedAdminTablesRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -96,7 +115,9 @@ export interface FileRouteTypes {
     | '/menu'
     | '/admin/login'
     | '/order/$id'
+    | '/admin/menu'
     | '/admin/orders'
+    | '/admin/tables'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,7 +126,9 @@ export interface FileRouteTypes {
     | '/menu'
     | '/admin/login'
     | '/order/$id'
+    | '/admin/menu'
     | '/admin/orders'
+    | '/admin/tables'
     | '/admin'
   id:
     | '__root__'
@@ -115,7 +138,9 @@ export interface FileRouteTypes {
     | '/menu'
     | '/admin/login'
     | '/order/$id'
+    | '/_authenticated/admin/menu'
     | '/_authenticated/admin/orders'
+    | '/_authenticated/admin/tables'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -179,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/menu': {
+      id: '/_authenticated/admin/menu'
+      path: '/admin/menu'
+      fullPath: '/admin/menu'
+      preLoaderRoute: typeof AuthenticatedAdminMenuRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/orders': {
       id: '/_authenticated/admin/orders'
       path: '/admin/orders'
@@ -186,16 +218,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminOrdersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/tables': {
+      id: '/_authenticated/admin/tables'
+      path: '/admin/tables'
+      fullPath: '/admin/tables'
+      preLoaderRoute: typeof AuthenticatedAdminTablesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminMenuRoute: typeof AuthenticatedAdminMenuRoute
   AuthenticatedAdminOrdersRoute: typeof AuthenticatedAdminOrdersRoute
+  AuthenticatedAdminTablesRoute: typeof AuthenticatedAdminTablesRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminMenuRoute: AuthenticatedAdminMenuRoute,
   AuthenticatedAdminOrdersRoute: AuthenticatedAdminOrdersRoute,
+  AuthenticatedAdminTablesRoute: AuthenticatedAdminTablesRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
