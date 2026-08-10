@@ -51,7 +51,9 @@ const STEPS: OrderStatus[] = ["NEW", "ACCEPTED", "PREPARING", "READY", "COMPLETE
 
 function OrderPage() {
   const { id } = Route.useParams();
-  const { data } = useSuspenseQuery(orderQuery(id));
+  const { k: token } = Route.useSearch();
+  const { data } = useSuspenseQuery(orderQuery(id, token));
+
   const status = (isOrderStatus(data.status) ? data.status : "NEW") as OrderStatus;
   const stepIndex = STEPS.indexOf(status);
 
