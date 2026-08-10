@@ -1,7 +1,7 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Minus, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, CreditCard, Minus, Plus, Store, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/lib/cart";
-import { getMenuByToken, placeOrder } from "@/lib/customer.functions";
-import { formatMoney } from "@/lib/money";
+import {
+  confirmPayment,
+  getMenuByToken,
+  placeOrder,
+  reportPaymentFailure,
+  startOnlinePayment,
+} from "@/lib/customer.functions";
+import { formatMoney, parseMoneyToCents } from "@/lib/money";
+import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
+import { newRequestKey, rememberOrder } from "@/lib/recent-orders";
 
 const menuQuery = (token: string) =>
   queryOptions({
@@ -26,11 +34,11 @@ export const Route = createFileRoute("/cart")({
     deps.t ? context.queryClient.ensureQueryData(menuQuery(deps.t)) : null,
   head: () => ({
     meta: [
-      { title: "Your cart — Tablebrew" },
-      { name: "description", content: "Review your items and place your table order." },
+      { title: "Checkout — Tablebrew" },
+      { name: "description", content: "Review your items, add a tip and pay your way." },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Your cart" },
-      { property: "og:description", content: "Review your items and place your table order." },
+      { property: "og:title", content: "Checkout" },
+      { property: "og:description", content: "Review your items, add a tip and pay your way." },
     ],
   }),
   errorComponent: ({ error }) => (
@@ -54,6 +62,8 @@ function CartPage() {
   return <CartContent token={token} />;
 }
 
+const TIP_PRESETS = [0, 1000, 2000, 5000];
+
 function CartContent({ token }: { token: string }) {
   const { data } = useSuspenseQuery(menuQuery(token));
   const cart = useCart(token);
@@ -61,13 +71,26 @@ function CartContent({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [tipPreset, setTipPreset] = useState<number | "custom">(0);
+  const [customTip, setCustomTip] = useState("");
+  const [method, setMethod] = useState<"ONLINE" | "CAFE">("ONLINE");
   const [submitting, setSubmitting] = useState(false);
+  // One idempotency key per cart session: double-taps can never duplicate.
+  const [requestKey, setRequestKey] = useState(() => newRequestKey());
 
   const currency = data.cafe.currency;
   const taxEstimate = Math.round(cart.subtotal * data.cafe.tax_rate);
 
+  const tipCents = useMemo(() => {
+    if (tipPreset !== "custom") return tipPreset;
+    const parsed = parseMoneyToCents(customTip);
+    return parsed == null ? 0 : Math.min(500000, parsed);
+  }, [tipPreset, customTip]);
+
+  const total = cart.subtotal + taxEstimate + tipCents;
+
   async function submit() {
-    if (cart.lines.length === 0) return;
+    if (cart.lines.length === 0 || submitting) return;
     setSubmitting(true);
     try {
       const result = await placeOrder({
@@ -76,15 +99,87 @@ function CartContent({ token }: { token: string }) {
           customer_name: name.trim() || null,
           customer_phone: phone.trim() || null,
           notes: notes.trim() || null,
+          tip_cents: tipCents,
+          payment_method: method,
+          request_key: requestKey,
           items: cart.lines.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity })),
         },
       });
+
+      rememberOrder({
+        id: result.order_id,
+        token: result.tracking_token,
+        order_number: 0,
+        cafe_name: data.cafe.name,
+        table_number: data.table.table_number,
+        total_cents: result.total_cents,
+        currency,
+        at: new Date().toISOString(),
+      });
+
+      if (method === "ONLINE") {
+        await payNow(result.order_id, result.tracking_token);
+      }
+
       cart.clear();
-      navigate({ to: "/order/$id", params: { id: result.order_id } });
+      setRequestKey(newRequestKey());
+      navigate({
+        to: "/order/$id",
+        params: { id: result.order_id },
+        search: { k: result.tracking_token },
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place your order");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /** Opens Razorpay for an order that already exists server-side. */
+  async function payNow(orderId: string, trackingToken: string) {
+    try {
+      const session = await startOnlinePayment({ data: { id: orderId, token: trackingToken } });
+      const outcome = await openRazorpayCheckout({
+        key_id: session.key_id,
+        provider_order_id: session.provider_order_id,
+        amount: session.amount,
+        currency: session.currency,
+        cafe_name: session.cafe_name,
+        order_number: session.order_number,
+        customer_name: name.trim() || null,
+        customer_phone: phone.trim() || null,
+      });
+
+      if (!outcome.ok) {
+        await reportPaymentFailure({
+          data: {
+            id: orderId,
+            token: trackingToken,
+            razorpay_order_id: session.provider_order_id,
+            reason: outcome.reason,
+          },
+        });
+        toast.warning(`${outcome.reason}. You can retry payment on the next screen.`);
+        return;
+      }
+
+      const verified = await confirmPayment({
+        data: {
+          id: orderId,
+          token: trackingToken,
+          razorpay_order_id: outcome.razorpay_order_id,
+          razorpay_payment_id: outcome.razorpay_payment_id,
+          razorpay_signature: outcome.razorpay_signature,
+        },
+      });
+      if (verified.payment_status === "PAID") toast.success("Payment received. Thank you!");
+      else toast.info("We are confirming your payment with the bank.");
+    } catch (error) {
+      toast.warning(
+        error instanceof Error
+          ? error.message
+          : "Payment could not be started. You can retry on the next screen.",
+      );
     }
   }
 
@@ -110,7 +205,7 @@ function CartContent({ token }: { token: string }) {
         {cart.lines.length === 0 ? (
           <div className="surface-card p-8 text-center">
             <p className="text-sm text-muted-foreground">Your cart is empty.</p>
-            <Button asChild className="mt-4">
+            <Button asChild className="mt-4 rounded-full">
               <Link to="/menu" search={{ t: token }}>
                 Browse the menu
               </Link>
@@ -181,6 +276,79 @@ function CartContent({ token }: { token: string }) {
               ))}
             </ul>
 
+            {/* Tip */}
+            <section className="surface-card space-y-3 p-4">
+              <div>
+                <h2 className="font-display text-base font-semibold">Add a tip?</h2>
+                <p className="text-xs text-muted-foreground">
+                  100% optional — it goes to the team who made your order.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {TIP_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    aria-pressed={tipPreset === preset}
+                    onClick={() => setTipPreset(preset)}
+                    className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                      tipPreset === preset
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    {preset === 0 ? "No tip" : formatMoney(preset, currency)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-pressed={tipPreset === "custom"}
+                  onClick={() => setTipPreset("custom")}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                    tipPreset === "custom"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card hover:bg-muted"
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+              {tipPreset === "custom" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tip">Custom tip</Label>
+                  <Input
+                    id="tip"
+                    inputMode="decimal"
+                    value={customTip}
+                    maxLength={8}
+                    placeholder="e.g. 30"
+                    onChange={(e) => setCustomTip(e.target.value)}
+                  />
+                </div>
+              )}
+            </section>
+
+            {/* Payment method */}
+            <section className="surface-card space-y-2 p-4">
+              <h2 className="font-display text-base font-semibold">Payment</h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <MethodOption
+                  active={method === "ONLINE"}
+                  onClick={() => setMethod("ONLINE")}
+                  icon={<CreditCard className="size-5" aria-hidden />}
+                  title="Pay online"
+                  subtitle="UPI, cards & wallets"
+                />
+                <MethodOption
+                  active={method === "CAFE"}
+                  onClick={() => setMethod("CAFE")}
+                  icon={<Store className="size-5" aria-hidden />}
+                  title="Pay at cafe"
+                  subtitle="Settle at the counter"
+                />
+              </div>
+            </section>
+
             <section className="surface-card space-y-4 p-4">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Optional details
@@ -234,9 +402,13 @@ function CartContent({ token }: { token: string }) {
                   <span>{formatMoney(taxEstimate, currency)}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tip</span>
+                <span>{formatMoney(tipCents, currency)}</span>
+              </div>
               <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
-                <span>Estimated total</span>
-                <span>{formatMoney(cart.subtotal + taxEstimate, currency)}</span>
+                <span>Total</span>
+                <span>{formatMoney(total, currency)}</span>
               </div>
               <p className="pt-1 text-xs text-muted-foreground">
                 The cafe confirms the final total from its current menu prices.
@@ -249,14 +421,58 @@ function CartContent({ token }: { token: string }) {
       {cart.lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 p-4 backdrop-blur">
           <div className="mx-auto max-w-2xl">
-            <Button size="lg" className="w-full" disabled={submitting} onClick={submit}>
+            <Button
+              size="lg"
+              className="w-full rounded-full text-base"
+              disabled={submitting}
+              onClick={submit}
+            >
               {submitting
-                ? "Placing order…"
-                : `Place order · ${formatMoney(cart.subtotal + taxEstimate, currency)}`}
+                ? "Placing your order…"
+                : method === "ONLINE"
+                  ? `Pay ${formatMoney(total, currency)}`
+                  : `Place order · ${formatMoney(total, currency)}`}
             </Button>
           </div>
         </div>
       )}
     </main>
+  );
+}
+
+function MethodOption({
+  active,
+  onClick,
+  icon,
+  title,
+  subtitle,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+        active ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted"
+      }`}
+    >
+      <span
+        className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+          active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+        }`}
+      >
+        {icon}
+      </span>
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="block text-xs text-muted-foreground">{subtitle}</span>
+      </span>
+    </button>
   );
 }
