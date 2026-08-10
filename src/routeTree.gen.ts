@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as MyOrdersRouteImport } from './routes/my-orders'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as OrderIdRouteImport } from './routes/order.$id'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -20,6 +21,7 @@ import { Route as AuthenticatedAdminMenuRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminOrdersRouteImport } from './routes/_authenticated/admin.orders'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminTablesRouteImport } from './routes/_authenticated/admin.tables'
+import { Route as ApiPublicRazorpayWebhookRouteImport } from './routes/api/public/razorpay-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -38,6 +40,11 @@ const CartRoute = CartRouteImport.update({
 const MenuRoute = MenuRouteImport.update({
   id: '/menu',
   path: '/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyOrdersRoute = MyOrdersRouteImport.update({
+  id: '/my-orders',
+  path: '/my-orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -78,29 +85,39 @@ const AuthenticatedAdminTablesRoute =
     path: '/admin/tables',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicRazorpayWebhookRoute =
+  ApiPublicRazorpayWebhookRouteImport.update({
+    id: '/api/public/razorpay-webhook',
+    path: '/api/public/razorpay-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
   '/menu': typeof MenuRoute
+  '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
   '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/tables': typeof AuthenticatedAdminTablesRoute
+  '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
   '/menu': typeof MenuRoute
+  '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
   '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/tables': typeof AuthenticatedAdminTablesRoute
+  '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -109,12 +126,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/cart': typeof CartRoute
   '/menu': typeof MenuRoute
+  '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
   '/order/$id': typeof OrderIdRoute
   '/_authenticated/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/_authenticated/admin/orders': typeof AuthenticatedAdminOrdersRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/tables': typeof AuthenticatedAdminTablesRoute
+  '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -123,24 +142,28 @@ export interface FileRouteTypes {
     | '/'
     | '/cart'
     | '/menu'
+    | '/my-orders'
     | '/admin/login'
     | '/order/$id'
     | '/admin/menu'
     | '/admin/orders'
     | '/admin/settings'
     | '/admin/tables'
+    | '/api/public/razorpay-webhook'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/cart'
     | '/menu'
+    | '/my-orders'
     | '/admin/login'
     | '/order/$id'
     | '/admin/menu'
     | '/admin/orders'
     | '/admin/settings'
     | '/admin/tables'
+    | '/api/public/razorpay-webhook'
     | '/admin'
   id:
     | '__root__'
@@ -148,12 +171,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/cart'
     | '/menu'
+    | '/my-orders'
     | '/admin/login'
     | '/order/$id'
     | '/_authenticated/admin/menu'
     | '/_authenticated/admin/orders'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/tables'
+    | '/api/public/razorpay-webhook'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -162,8 +187,10 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CartRoute: typeof CartRoute
   MenuRoute: typeof MenuRoute
+  MyOrdersRoute: typeof MyOrdersRoute
   AdminLoginRoute: typeof AdminLoginRoute
   OrderIdRoute: typeof OrderIdRoute
+  ApiPublicRazorpayWebhookRoute: typeof ApiPublicRazorpayWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -194,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: '/menu'
       fullPath: '/menu'
       preLoaderRoute: typeof MenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-orders': {
+      id: '/my-orders'
+      path: '/my-orders'
+      fullPath: '/my-orders'
+      preLoaderRoute: typeof MyOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -245,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTablesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/razorpay-webhook': {
+      id: '/api/public/razorpay-webhook'
+      path: '/api/public/razorpay-webhook'
+      fullPath: '/api/public/razorpay-webhook'
+      preLoaderRoute: typeof ApiPublicRazorpayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -272,19 +313,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CartRoute: CartRoute,
   MenuRoute: MenuRoute,
+  MyOrdersRoute: MyOrdersRoute,
   AdminLoginRoute: AdminLoginRoute,
   OrderIdRoute: OrderIdRoute,
+  ApiPublicRazorpayWebhookRoute: ApiPublicRazorpayWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
