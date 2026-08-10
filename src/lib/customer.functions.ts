@@ -500,8 +500,8 @@ export const submitReview = createServerFn({ method: "POST" })
       _order_id: data.id,
       _tracking_token: data.token,
       _rating: data.rating,
-      _comment: data.comment ?? undefined,
-      _display_name: data.display_name ?? undefined,
+      ...(data.comment ? { _comment: data.comment } : {}),
+      ...(data.display_name ? { _display_name: data.display_name } : {}),
     });
 
     if (error) {
