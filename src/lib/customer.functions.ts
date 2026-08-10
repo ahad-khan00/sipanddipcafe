@@ -184,7 +184,6 @@ export const placeOrder = createServerFn({ method: "POST" })
         })),
         _tip_cents: data.tip_cents ?? 0,
         _payment_method: data.payment_method,
-        _customer_id: null,
         _request_key: data.request_key,
       });
 
@@ -501,9 +500,8 @@ export const submitReview = createServerFn({ method: "POST" })
       _order_id: data.id,
       _tracking_token: data.token,
       _rating: data.rating,
-      _comment: data.comment ?? null,
-      _customer_id: null,
-      _display_name: data.display_name ?? null,
+      _comment: data.comment ?? undefined,
+      _display_name: data.display_name ?? undefined,
     });
 
     if (error) {
