@@ -12,16 +12,20 @@ import {
   type OrderStatus,
 } from "@/lib/order-status";
 
-const orderQuery = (id: string) =>
+const orderQuery = (id: string, token: string) =>
   queryOptions({
-    queryKey: ["order", id],
-    queryFn: () => getOrder({ data: { id } }),
+    queryKey: ["order", id, token],
+    queryFn: () => getOrder({ data: { id, token } }),
     refetchInterval: 4000,
     refetchIntervalInBackground: false,
   });
 
 export const Route = createFileRoute("/order/$id")({
-  loader: ({ context, params }) => context.queryClient.ensureQueryData(orderQuery(params.id)),
+  validateSearch: (search: Record<string, unknown>) => ({ k: String(search["k"] ?? "") }),
+  loaderDeps: ({ search }) => ({ k: search.k }),
+  loader: ({ context, params, deps }) =>
+    deps.k ? context.queryClient.ensureQueryData(orderQuery(params.id, deps.k)) : null,
+
   head: () => ({
     meta: [
       { title: "Your order — Tablebrew" },
