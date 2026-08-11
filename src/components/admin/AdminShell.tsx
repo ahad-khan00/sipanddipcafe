@@ -1,6 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, LayoutDashboard, LogOut, QrCode, Settings, UtensilsCrossed } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  QrCode,
+  Settings,
+  Star,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +23,7 @@ const NAV = [
   { to: "/admin/orders", label: "Orders", icon: ClipboardList },
   { to: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
   { to: "/admin/tables", label: "Tables", icon: QrCode },
+  { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ] as const;
 
