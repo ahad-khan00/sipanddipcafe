@@ -15,7 +15,11 @@ export type AdminOrder = {
   notes: string | null;
   subtotal_cents: number;
   tax_cents: number;
+  tip_cents: number;
   total_cents: number;
+  payment_method: string;
+  payment_status: string;
+  paid_at: string | null;
   table_id: string;
   cafe_tables: { table_number: string } | null;
   order_items: {
@@ -38,7 +42,7 @@ export function useOrders(cafeId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, order_number, status, created_at, customer_name, customer_phone, notes, subtotal_cents, tax_cents, total_cents, table_id, cafe_tables:table_id (table_number), order_items (id, item_name, quantity, unit_price_cents, line_total_cents)",
+          "id, order_number, status, created_at, customer_name, customer_phone, notes, subtotal_cents, tax_cents, tip_cents, total_cents, payment_method, payment_status, paid_at, table_id, cafe_tables:table_id (table_number), order_items (id, item_name, quantity, unit_price_cents, line_total_cents)",
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -85,5 +89,19 @@ export function useOrders(cafeId: string | undefined) {
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
   const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Settles a pay-at-cafe order at the counter. The database guard only permits
+ * PENDING -> PAID on CAFE orders; online payments are set by the provider.
+ */
+export async function markCafeOrderPaid(id: string) {
+  const { error } = await supabase
+    .from("orders")
+    .update({ payment_status: "PAID" })
+    .eq("id", id)
+    .eq("payment_method", "CAFE")
+    .eq("payment_status", "PENDING");
   if (error) throw error;
 }

@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
+import { Stars } from "@/components/customer/Stars";
 import { useOrders } from "@/hooks/useOrders";
+import { ratingSummary, useReviews } from "@/hooks/useReviews";
 import { formatMoney } from "@/lib/money";
 import { STATUS_CLASS, STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 
@@ -30,6 +32,8 @@ function OverviewPage() {
 
 function Overview({ cafeId, currency }: { cafeId: string; currency: string }) {
   const { data: orders = [], isPending } = useOrders(cafeId);
+  const { data: reviews = [] } = useReviews(cafeId);
+  const rating = ratingSummary(reviews);
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
@@ -37,6 +41,13 @@ function Overview({ cafeId, currency }: { cafeId: string; currency: string }) {
   const revenue = today
     .filter((o) => o.status !== "CANCELLED")
     .reduce((sum, o) => sum + o.total_cents, 0);
+
+  const tips = today
+    .filter((o) => o.status !== "CANCELLED")
+    .reduce((sum, o) => sum + o.tip_cents, 0);
+  const awaitingPayment = orders.filter(
+    (o) => o.payment_status === "PENDING" && o.status !== "CANCELLED",
+  ).length;
 
   const counts = LIVE.map((status) => ({
     status,
@@ -48,11 +59,26 @@ function Overview({ cafeId, currency }: { cafeId: string; currency: string }) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Orders today" value={String(today.length)} />
         <Stat label="Revenue today" value={formatMoney(revenue, currency)} />
+        <Stat label="Tips today" value={formatMoney(tips, currency)} />
         <Stat
           label="Waiting to accept"
           value={String(orders.filter((o) => o.status === "NEW").length)}
           highlight
         />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="surface-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Average rating
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-2xl font-semibold">
+            {rating.average?.toFixed(1) ?? "—"}
+            {rating.average != null && <Stars value={rating.average} />}
+          </p>
+        </div>
+        <Stat label="Total reviews" value={String(rating.total)} />
+        <Stat label="Awaiting payment" value={String(awaitingPayment)} />
         <Stat
           label="Ready for pickup"
           value={String(orders.filter((o) => o.status === "READY").length)}
