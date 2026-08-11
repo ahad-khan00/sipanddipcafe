@@ -7,8 +7,18 @@ import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useOrders, updateOrderStatus, type AdminOrder } from "@/hooks/useOrders";
+import {
+  markCafeOrderPaid,
+  updateOrderStatus,
+  useOrders,
+  type AdminOrder,
+} from "@/hooks/useOrders";
 import { formatMoney } from "@/lib/money";
+import {
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_CLASS,
+  PAYMENT_STATUS_LABEL,
+} from "@/lib/payment-status";
 import { NEXT_STATUS, STATUS_CLASS, STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
 
 export const Route = createFileRoute("/_authenticated/admin/orders")({
@@ -60,6 +70,19 @@ function OrdersBoard({ cafeId, currency }: { cafeId: string; currency: string })
     }
   }
 
+  async function markPaid(order: AdminOrder) {
+    setBusyId(order.id);
+    try {
+      await markCafeOrderPaid(order.id);
+      toast.success(`Order #${order.order_number} marked paid`);
+      await queryClient.invalidateQueries({ queryKey: ["orders", cafeId] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not record this payment");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <Tabs defaultValue="new">
       <TabsList className="w-full justify-start overflow-x-auto">
@@ -93,6 +116,7 @@ function OrdersBoard({ cafeId, currency }: { cafeId: string; currency: string })
                     currency={currency}
                     busy={busyId === order.id}
                     onMove={move}
+                    onMarkPaid={markPaid}
                   />
                 ))}
               </div>
@@ -109,11 +133,13 @@ function OrderCard({
   currency,
   busy,
   onMove,
+  onMarkPaid,
 }: {
   order: AdminOrder;
   currency: string;
   busy: boolean;
   onMove: (order: AdminOrder, status: OrderStatus) => void;
+  onMarkPaid: (order: AdminOrder) => void;
 }) {
   const next = NEXT_STATUS[order.status];
   const open = order.status !== "COMPLETED" && order.status !== "CANCELLED";
@@ -129,6 +155,17 @@ function OrderCard({
           className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[order.status]}`}
         >
           {STATUS_LABEL[order.status]}
+        </span>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="rounded-full border border-border bg-muted px-2 py-0.5 font-semibold text-muted-foreground">
+          {PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}
+        </span>
+        <span
+          className={`rounded-full border px-2 py-0.5 font-semibold ${PAYMENT_STATUS_CLASS[order.payment_status] ?? ""}`}
+        >
+          {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
         </span>
       </div>
 
@@ -174,11 +211,36 @@ function OrderCard({
             {order.notes}
           </p>
         ) : null}
+        <p className="flex justify-between pt-1 text-muted-foreground">
+          <span>Subtotal</span>
+          <span>{formatMoney(order.subtotal_cents, currency)}</span>
+        </p>
+        {order.tax_cents > 0 && (
+          <p className="flex justify-between text-muted-foreground">
+            <span>Tax</span>
+            <span>{formatMoney(order.tax_cents, currency)}</span>
+          </p>
+        )}
+        <p className="flex justify-between text-muted-foreground">
+          <span>Tip</span>
+          <span>{formatMoney(order.tip_cents, currency)}</span>
+        </p>
         <p className="flex justify-between pt-1 text-base font-semibold">
           <span>Total</span>
           <span>{formatMoney(order.total_cents, currency)}</span>
         </p>
       </div>
+
+      {order.payment_method === "CAFE" && order.payment_status === "PENDING" && open && (
+        <Button
+          variant="secondary"
+          className="mt-3"
+          disabled={busy}
+          onClick={() => onMarkPaid(order)}
+        >
+          Mark paid at counter
+        </Button>
+      )}
 
       {open && (
         <div className="mt-4 flex gap-2">
