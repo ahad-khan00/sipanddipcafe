@@ -155,12 +155,15 @@ function MenuContent({ token }: { token: string }) {
           </p>
         )}
 
-        {visible.map((item) => {
+        {visible.map((item, index) => {
           const line = cart.lines.find((l) => l.menu_item_id === item.id);
           return (
             <article
               key={item.id}
-              className="surface-card flex gap-4 overflow-hidden p-3 transition-shadow hover:shadow-md sm:p-4"
+              style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+              className={`surface-card rise flex gap-4 overflow-hidden p-3 transition-shadow hover:shadow-[var(--shadow-lift)] sm:p-4 ${
+                item.available ? "" : "opacity-70"
+              }`}
               aria-label={item.name}
             >
               <div className="size-24 shrink-0 overflow-hidden rounded-2xl bg-muted sm:size-28">
@@ -169,24 +172,27 @@ function MenuContent({ token }: { token: string }) {
                     src={item.image_url}
                     alt={item.name}
                     loading="lazy"
-                    className="size-full object-cover"
+                    decoding="async"
+                    className="size-full object-cover transition-transform duration-500 hover:scale-105"
                   />
                 ) : (
-                  <div className="flex size-full items-center justify-center">
+                  <div className="flex size-full items-center justify-center bg-secondary">
                     <UtensilsCrossed className="size-6 text-muted-foreground" aria-hidden />
                   </div>
                 )}
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col">
-                <h2 className="font-display text-base font-semibold leading-snug">{item.name}</h2>
+                <h2 className="font-display text-[1.05rem] font-semibold leading-snug">
+                  {item.name}
+                </h2>
                 {item.description ? (
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                  <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                     {item.description}
                   </p>
                 ) : null}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                  <span className="text-base font-semibold">
+                  <span className="text-[1.05rem] font-semibold tracking-tight">
                     {formatMoney(item.price_cents, data.cafe.currency)}
                   </span>
 
@@ -195,11 +201,11 @@ function MenuContent({ token }: { token: string }) {
                       Sold out
                     </span>
                   ) : line ? (
-                    <div className="flex items-center gap-1 rounded-full border border-border p-1">
+                    <div className="flex items-center gap-1 rounded-full border border-border bg-secondary/60 p-1">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="size-8 rounded-full"
+                        className="tap size-9 rounded-full"
                         aria-label={`Remove one ${item.name}`}
                         onClick={() =>
                           cart.setQuantity(
@@ -214,11 +220,11 @@ function MenuContent({ token }: { token: string }) {
                       >
                         <Minus className="size-4" />
                       </Button>
-                      <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
+                      <span className="w-6 text-center text-sm font-bold">{line.quantity}</span>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="size-8 rounded-full"
+                        className="tap size-9 rounded-full"
                         aria-label={`Add one ${item.name}`}
                         onClick={() =>
                           cart.setQuantity(
@@ -236,8 +242,7 @@ function MenuContent({ token }: { token: string }) {
                     </div>
                   ) : (
                     <Button
-                      size="sm"
-                      className="rounded-full px-5"
+                      className="tap h-10 rounded-full px-6 text-sm font-semibold"
                       onClick={() =>
                         cart.add({
                           menu_item_id: item.id,
