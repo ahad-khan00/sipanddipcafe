@@ -324,9 +324,9 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+      className={`tap shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
         active
-          ? "border-primary bg-primary text-primary-foreground"
+          ? "border-primary bg-primary text-primary-foreground shadow-[var(--shadow-card)]"
           : "border-border bg-card text-foreground hover:bg-muted"
       }`}
     >
