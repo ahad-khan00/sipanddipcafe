@@ -72,25 +72,29 @@ function MenuContent({ token }: { token: string }) {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-32">
+    <main className="min-h-screen bg-background pb-36">
       {/* Cafe header */}
-      <header className="relative overflow-hidden bg-primary px-5 pb-8 pt-7 text-primary-foreground">
+      <header className="relative overflow-hidden rounded-b-[2rem] bg-primary px-5 pb-9 pt-8 text-primary-foreground shadow-[var(--shadow-lift)]">
         <div
-          className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-accent/25 blur-2xl"
+          className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-accent/25 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 -left-16 size-56 rounded-full bg-accent/10 blur-3xl"
           aria-hidden
         />
         <div className="relative mx-auto max-w-2xl text-center">
-          <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-            <Coffee className="size-7" aria-hidden />
+          <span className="rise mx-auto flex size-16 items-center justify-center rounded-full bg-primary-foreground/15 ring-1 ring-primary-foreground/25 backdrop-blur">
+            <Coffee className="size-8" aria-hidden />
           </span>
-          <h1 className="mt-4 font-display text-3xl font-semibold leading-tight">
+          <h1 className="rise mt-5 font-display text-[2rem] font-semibold leading-tight">
             {data.cafe.name}
           </h1>
-          <p className="mt-1.5 text-sm text-primary-foreground/80">
+          <p className="mt-2 text-sm text-primary-foreground/80">
             {data.cafe.description ?? "Freshly made for you"}
           </p>
 
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-sm">
+          <div className="mt-3.5 flex items-center justify-center gap-1.5 text-sm">
             {data.rating.average != null && data.rating.total > 0 ? (
               <>
                 <Stars value={data.rating.average} />
@@ -102,14 +106,13 @@ function MenuContent({ token }: { token: string }) {
             )}
           </div>
 
-          <span className="mt-4 inline-flex rounded-full bg-primary-foreground px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-            Table {data.table.table_number}
-          </span>
-
-          <div className="mt-4 flex justify-center">
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <span className="inline-flex rounded-full bg-primary-foreground px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              Table {data.table.table_number}
+            </span>
             <Link
               to="/my-orders"
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/30 px-3 py-1 text-xs font-medium text-primary-foreground/90 transition-colors hover:bg-primary-foreground/10"
+              className="tap inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/30 px-3.5 py-1.5 text-xs font-medium text-primary-foreground/90 hover:bg-primary-foreground/10"
             >
               <History className="size-3.5" aria-hidden /> My orders
             </Link>
@@ -119,8 +122,8 @@ function MenuContent({ token }: { token: string }) {
 
       {/* Category navigation */}
       {(categories.length > 0 || uncategorised) && (
-        <nav className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-          <div className="mx-auto flex max-w-2xl gap-2 overflow-x-auto px-5 py-3">
+        <nav className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur-xl">
+          <div className="no-scrollbar mx-auto flex max-w-2xl gap-2 overflow-x-auto px-5 py-3">
             <CategoryChip
               label="All"
               active={activeCategory === "all"}
