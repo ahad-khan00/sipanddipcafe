@@ -1,9 +1,19 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Clock, CookingPot, PartyPopper, XCircle } from "lucide-react";
+import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Check, CheckCircle2, Clock, CookingPot, PartyPopper, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
-import { getOrder } from "@/lib/customer.functions";
+import { ReviewForm } from "@/components/customer/ReviewForm";
+import { Button } from "@/components/ui/button";
+import {
+  confirmPayment,
+  getOrder,
+  reportPaymentFailure,
+  startOnlinePayment,
+} from "@/lib/customer.functions";
 import { formatMoney } from "@/lib/money";
+import { PAYMENT_STATUS_CLASS, PAYMENT_STATUS_LABEL } from "@/lib/payment-status";
+import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
 import {
   STATUS_CLASS,
   STATUS_CUSTOMER_COPY,
@@ -11,6 +21,7 @@ import {
   isOrderStatus,
   type OrderStatus,
 } from "@/lib/order-status";
+
 
 const orderQuery = (id: string, token: string) =>
   queryOptions({
