@@ -72,25 +72,29 @@ function MenuContent({ token }: { token: string }) {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-32">
+    <main className="min-h-screen bg-background pb-36">
       {/* Cafe header */}
-      <header className="relative overflow-hidden bg-primary px-5 pb-8 pt-7 text-primary-foreground">
+      <header className="relative overflow-hidden rounded-b-[2rem] bg-primary px-5 pb-9 pt-8 text-primary-foreground shadow-[var(--shadow-lift)]">
         <div
-          className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-accent/25 blur-2xl"
+          className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-accent/25 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 -left-16 size-56 rounded-full bg-accent/10 blur-3xl"
           aria-hidden
         />
         <div className="relative mx-auto max-w-2xl text-center">
-          <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-            <Coffee className="size-7" aria-hidden />
+          <span className="rise mx-auto flex size-16 items-center justify-center rounded-full bg-primary-foreground/15 ring-1 ring-primary-foreground/25 backdrop-blur">
+            <Coffee className="size-8" aria-hidden />
           </span>
-          <h1 className="mt-4 font-display text-3xl font-semibold leading-tight">
+          <h1 className="rise mt-5 font-display text-[2rem] font-semibold leading-tight">
             {data.cafe.name}
           </h1>
-          <p className="mt-1.5 text-sm text-primary-foreground/80">
+          <p className="mt-2 text-sm text-primary-foreground/80">
             {data.cafe.description ?? "Freshly made for you"}
           </p>
 
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-sm">
+          <div className="mt-3.5 flex items-center justify-center gap-1.5 text-sm">
             {data.rating.average != null && data.rating.total > 0 ? (
               <>
                 <Stars value={data.rating.average} />
@@ -102,14 +106,13 @@ function MenuContent({ token }: { token: string }) {
             )}
           </div>
 
-          <span className="mt-4 inline-flex rounded-full bg-primary-foreground px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-            Table {data.table.table_number}
-          </span>
-
-          <div className="mt-4 flex justify-center">
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <span className="inline-flex rounded-full bg-primary-foreground px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              Table {data.table.table_number}
+            </span>
             <Link
               to="/my-orders"
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/30 px-3 py-1 text-xs font-medium text-primary-foreground/90 transition-colors hover:bg-primary-foreground/10"
+              className="tap inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/30 px-3.5 py-1.5 text-xs font-medium text-primary-foreground/90 hover:bg-primary-foreground/10"
             >
               <History className="size-3.5" aria-hidden /> My orders
             </Link>
@@ -119,8 +122,8 @@ function MenuContent({ token }: { token: string }) {
 
       {/* Category navigation */}
       {(categories.length > 0 || uncategorised) && (
-        <nav className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-          <div className="mx-auto flex max-w-2xl gap-2 overflow-x-auto px-5 py-3">
+        <nav className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur-xl">
+          <div className="no-scrollbar mx-auto flex max-w-2xl gap-2 overflow-x-auto px-5 py-3">
             <CategoryChip
               label="All"
               active={activeCategory === "all"}
@@ -152,12 +155,15 @@ function MenuContent({ token }: { token: string }) {
           </p>
         )}
 
-        {visible.map((item) => {
+        {visible.map((item, index) => {
           const line = cart.lines.find((l) => l.menu_item_id === item.id);
           return (
             <article
               key={item.id}
-              className="surface-card flex gap-4 overflow-hidden p-3 transition-shadow hover:shadow-md sm:p-4"
+              style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+              className={`surface-card rise flex gap-4 overflow-hidden p-3 transition-shadow hover:shadow-[var(--shadow-lift)] sm:p-4 ${
+                item.available ? "" : "opacity-70"
+              }`}
               aria-label={item.name}
             >
               <div className="size-24 shrink-0 overflow-hidden rounded-2xl bg-muted sm:size-28">
@@ -166,24 +172,27 @@ function MenuContent({ token }: { token: string }) {
                     src={item.image_url}
                     alt={item.name}
                     loading="lazy"
-                    className="size-full object-cover"
+                    decoding="async"
+                    className="size-full object-cover transition-transform duration-500 hover:scale-105"
                   />
                 ) : (
-                  <div className="flex size-full items-center justify-center">
+                  <div className="flex size-full items-center justify-center bg-secondary">
                     <UtensilsCrossed className="size-6 text-muted-foreground" aria-hidden />
                   </div>
                 )}
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col">
-                <h2 className="font-display text-base font-semibold leading-snug">{item.name}</h2>
+                <h2 className="font-display text-[1.05rem] font-semibold leading-snug">
+                  {item.name}
+                </h2>
                 {item.description ? (
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                  <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                     {item.description}
                   </p>
                 ) : null}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                  <span className="text-base font-semibold">
+                  <span className="text-[1.05rem] font-semibold tracking-tight">
                     {formatMoney(item.price_cents, data.cafe.currency)}
                   </span>
 
@@ -192,11 +201,11 @@ function MenuContent({ token }: { token: string }) {
                       Sold out
                     </span>
                   ) : line ? (
-                    <div className="flex items-center gap-1 rounded-full border border-border p-1">
+                    <div className="flex items-center gap-1 rounded-full border border-border bg-secondary/60 p-1">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="size-8 rounded-full"
+                        className="tap size-9 rounded-full"
                         aria-label={`Remove one ${item.name}`}
                         onClick={() =>
                           cart.setQuantity(
@@ -211,11 +220,11 @@ function MenuContent({ token }: { token: string }) {
                       >
                         <Minus className="size-4" />
                       </Button>
-                      <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
+                      <span className="w-6 text-center text-sm font-bold">{line.quantity}</span>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="size-8 rounded-full"
+                        className="tap size-9 rounded-full"
                         aria-label={`Add one ${item.name}`}
                         onClick={() =>
                           cart.setQuantity(
@@ -233,8 +242,7 @@ function MenuContent({ token }: { token: string }) {
                     </div>
                   ) : (
                     <Button
-                      size="sm"
-                      className="rounded-full px-5"
+                      className="tap h-10 rounded-full px-6 text-sm font-semibold"
                       onClick={() =>
                         cart.add({
                           menu_item_id: item.id,
@@ -282,9 +290,13 @@ function MenuContent({ token }: { token: string }) {
 
       {/* Sticky cart */}
       {cart.count > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 p-4 backdrop-blur">
+        <div className="slide-up-bar pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 px-4 pt-4 backdrop-blur-xl">
           <div className="mx-auto max-w-2xl">
-            <Button asChild size="lg" className="w-full rounded-full text-base">
+            <Button
+              asChild
+              size="lg"
+              className="tap h-14 w-full rounded-full text-base font-semibold shadow-[var(--shadow-lift)]"
+            >
               <Link to="/cart" search={{ t: token }}>
                 <ShoppingBag className="size-5" aria-hidden />
                 View cart · {cart.count} {cart.count === 1 ? "item" : "items"} ·{" "}
@@ -312,9 +324,9 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+      className={`tap shrink-0 rounded-full border px-4 py-2 text-sm font-semibold ${
         active
-          ? "border-primary bg-primary text-primary-foreground"
+          ? "border-primary bg-primary text-primary-foreground shadow-[var(--shadow-card)]"
           : "border-border bg-card text-foreground hover:bg-muted"
       }`}
     >
