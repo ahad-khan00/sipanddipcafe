@@ -60,13 +60,24 @@ export const Route = createFileRoute("/order/$id")({
 
 const STEPS: OrderStatus[] = ["NEW", "ACCEPTED", "PREPARING", "READY", "COMPLETED"];
 
+const STEP_COPY: Record<OrderStatus, string> = {
+  NEW: "Order received",
+  ACCEPTED: "Accepted",
+  PREPARING: "Preparing",
+  READY: "Ready",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
 function OrderPage() {
   const { id } = Route.useParams();
   const { k: token } = Route.useSearch();
   const { data } = useSuspenseQuery(orderQuery(id, token));
+  const queryClient = useQueryClient();
 
   const status = (isOrderStatus(data.status) ? data.status : "NEW") as OrderStatus;
   const stepIndex = STEPS.indexOf(status);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["order", id, token] });
 
   const Icon =
     status === "CANCELLED"
@@ -79,6 +90,55 @@ function OrderPage() {
             ? CookingPot
             : Clock;
 
+  const needsOnlinePayment =
+    data.payment_method === "ONLINE" &&
+    (data.payment_status === "PENDING" || data.payment_status === "FAILED") &&
+    status !== "CANCELLED";
+
+  /** Re-opens Razorpay for an existing order. Amounts always come from the server. */
+  async function retryPayment() {
+    try {
+      const session = await startOnlinePayment({ data: { id, token } });
+      const outcome = await openRazorpayCheckout({
+        key_id: session.key_id,
+        provider_order_id: session.provider_order_id,
+        amount: session.amount,
+        currency: session.currency,
+        cafe_name: session.cafe_name,
+        order_number: session.order_number,
+        customer_name: data.customer_name,
+        customer_phone: null,
+      });
+      if (!outcome.ok) {
+        await reportPaymentFailure({
+          data: {
+            id,
+            token,
+            razorpay_order_id: session.provider_order_id,
+            reason: outcome.reason,
+          },
+        });
+        toast.warning(outcome.reason);
+      } else {
+        const verified = await confirmPayment({
+          data: {
+            id,
+            token,
+            razorpay_order_id: outcome.razorpay_order_id,
+            razorpay_payment_id: outcome.razorpay_payment_id,
+            razorpay_signature: outcome.razorpay_signature,
+          },
+        });
+        if (verified.payment_status === "PAID") toast.success("Payment received. Thank you!");
+        else toast.info("We are confirming your payment with the bank.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Payment could not be started.");
+    } finally {
+      void refresh();
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background px-5 py-8">
       <div className="mx-auto max-w-md space-y-4">
@@ -90,32 +150,67 @@ function OrderPage() {
           <h1 className="mt-1 font-display text-3xl font-semibold">Order #{data.order_number}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Table {data.table_number}</p>
 
-          <span
-            className={`mt-5 inline-flex rounded-full border px-4 py-1.5 text-sm font-semibold ${STATUS_CLASS[status]}`}
-          >
-            {STATUS_LABEL[status]}
-          </span>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <span
+              className={`inline-flex rounded-full border px-4 py-1.5 text-sm font-semibold ${STATUS_CLASS[status]}`}
+            >
+              {STATUS_LABEL[status]}
+            </span>
+            <span
+              className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                PAYMENT_STATUS_CLASS[data.payment_status] ?? "border-border bg-muted"
+              }`}
+            >
+              {data.payment_method === "CAFE" && data.payment_status !== "PAID"
+                ? "Pay at cafe"
+                : (PAYMENT_STATUS_LABEL[data.payment_status] ?? data.payment_status)}
+            </span>
+          </div>
           <p className="mt-3 text-sm text-muted-foreground">{STATUS_CUSTOMER_COPY[status]}</p>
+
+          {needsOnlinePayment && (
+            <Button className="mt-4 w-full rounded-full" onClick={retryPayment}>
+              Pay {formatMoney(data.total_cents, data.currency)} now
+            </Button>
+          )}
         </div>
 
         {status !== "CANCELLED" && (
-          <ol className="surface-card grid grid-cols-5 gap-1 p-4 text-center">
-            {STEPS.map((step, index) => (
-              <li key={step} className="space-y-2">
-                <div
-                  className={`mx-auto h-1.5 w-full rounded-full ${
-                    index <= stepIndex ? "bg-accent" : "bg-muted"
-                  }`}
-                />
-                <span
-                  className={`block text-[10px] font-medium ${
-                    index <= stepIndex ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {STATUS_LABEL[step]}
-                </span>
-              </li>
-            ))}
+          <ol className="surface-card space-y-1 p-5">
+            {STEPS.map((step, index) => {
+              const done = index < stepIndex;
+              const current = index === stepIndex;
+              return (
+                <li key={step} className="flex items-center gap-3">
+                  <span
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
+                      done
+                        ? "border-accent bg-accent text-accent-foreground"
+                        : current
+                          ? "border-accent bg-accent/15 text-accent"
+                          : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {done ? (
+                      <Check className="size-3.5" aria-hidden />
+                    ) : current ? (
+                      <span className="size-2 rounded-full bg-accent" />
+                    ) : null}
+                  </span>
+                  <span
+                    className={`text-sm ${
+                      current
+                        ? "font-semibold text-foreground"
+                        : done
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {STEP_COPY[step]}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         )}
 
@@ -147,6 +242,12 @@ function OrderPage() {
                 <span>{formatMoney(data.tax_cents, data.currency)}</span>
               </div>
             )}
+            {data.tip_cents > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tip</span>
+                <span>{formatMoney(data.tip_cents, data.currency)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-semibold">
               <span>Total</span>
               <span>{formatMoney(data.total_cents, data.currency)}</span>
@@ -160,6 +261,26 @@ function OrderPage() {
           ) : null}
         </section>
 
+        {status === "COMPLETED" &&
+          (data.reviewed ? (
+            <p className="surface-card p-4 text-center text-sm text-muted-foreground">
+              Thanks for rating this order.
+            </p>
+          ) : (
+            <ReviewForm
+              orderId={id}
+              trackingToken={token}
+              defaultName={data.customer_name}
+              onSubmitted={refresh}
+            />
+          ))}
+
+        <div className="flex justify-center">
+          <Button asChild variant="ghost" size="sm" className="rounded-full">
+            <Link to="/my-orders">My orders</Link>
+          </Button>
+        </div>
+
         <p className="text-center text-xs text-muted-foreground">
           This page updates automatically. Keep it open to follow your order.
         </p>
@@ -167,3 +288,4 @@ function OrderPage() {
     </main>
   );
 }
+
