@@ -290,9 +290,13 @@ function MenuContent({ token }: { token: string }) {
 
       {/* Sticky cart */}
       {cart.count > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 p-4 backdrop-blur">
+        <div className="slide-up-bar pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 px-4 pt-4 backdrop-blur-xl">
           <div className="mx-auto max-w-2xl">
-            <Button asChild size="lg" className="w-full rounded-full text-base">
+            <Button
+              asChild
+              size="lg"
+              className="tap h-14 w-full rounded-full text-base font-semibold shadow-[var(--shadow-lift)]"
+            >
               <Link to="/cart" search={{ t: token }}>
                 <ShoppingBag className="size-5" aria-hidden />
                 View cart · {cart.count} {cart.count === 1 ? "item" : "items"} ·{" "}
