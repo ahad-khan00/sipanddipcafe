@@ -6,7 +6,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
+function getAuthRedirectUrl() {
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  return new URL("/auth/callback", origin).toString();
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function getFriendlyAuthError(error: { message?: string } | null | undefined) {
+  const message = error?.message?.toLowerCase() ?? "";
+
+  if (
+    message.includes("invalid login credentials") ||
+    message.includes("invalid credentials") ||
+    message.includes("incorrect password") ||
+    message.includes("user not found") ||
+    message.includes("wrong password")
+  ) {
+    return "Invalid email or password. Please check your credentials and try again.";
+  }
+
+  if (message.includes("email not confirmed") || message.includes("confirm your email")) {
+    return "Please confirm your email address before signing in.";
+  }
+
+  if (message.includes("already registered") || message.includes("user already registered")) {
+    return "An account with this email already exists. Please sign in instead.";
+  }
+
+  return error?.message ?? "Authentication failed";
+}
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -45,19 +77,36 @@ function LoginPage() {
     }
     setBusy(true);
     try {
+      const normalizedEmail = normalizeEmail(email);
+
       if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+
+        if (error) {
+          throw new Error(getFriendlyAuthError(error));
+        }
+
         navigate({ to: "/admin", replace: true });
       } else {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/admin` },
+          options: { emailRedirectTo: getAuthRedirectUrl() },
         });
-        if (error) throw error;
-        if (data.session) navigate({ to: "/admin", replace: true });
-        else setEmailSent(true);
+
+        if (error) {
+          throw new Error(getFriendlyAuthError(error));
+        }
+
+        if (data.session) {
+          navigate({ to: "/admin", replace: true });
+          return;
+        }
+
+        setEmailSent(true);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
@@ -68,16 +117,26 @@ function LoginPage() {
 
   async function handleGoogle() {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Google sign-in failed. Please try again.");
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: getAuthRedirectUrl(),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      navigate({ to: "/admin", replace: true });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Google sign-in failed. Please try again.");
+    } finally {
       setBusy(false);
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/admin", replace: true });
   }
 
   return (

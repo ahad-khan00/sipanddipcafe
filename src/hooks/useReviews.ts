@@ -29,6 +29,7 @@ export function useReviews(cafeId: string | undefined) {
       const { data, error } = await supabase
         .from("reviews")
         .select("id, order_id, rating, comment, display_name, hidden, flagged, created_at")
+        .eq("cafe_id", cafeId!)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;

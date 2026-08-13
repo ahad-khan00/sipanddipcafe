@@ -15,6 +15,7 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as MyOrdersRouteImport } from './routes/my-orders'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as OrderIdRouteImport } from './routes/order.$id'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminMenuRouteImport } from './routes/_authenticated/admin.menu'
@@ -51,6 +52,11 @@ const MyOrdersRoute = MyOrdersRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrderIdRoute = OrderIdRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/menu': typeof MenuRoute
   '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/order/$id': typeof OrderIdRoute
   '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/menu': typeof MenuRoute
   '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/order/$id': typeof OrderIdRoute
   '/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/menu': typeof MenuRoute
   '/my-orders': typeof MyOrdersRoute
   '/admin/login': typeof AdminLoginRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/order/$id': typeof OrderIdRoute
   '/_authenticated/admin/menu': typeof AuthenticatedAdminMenuRoute
   '/_authenticated/admin/orders': typeof AuthenticatedAdminOrdersRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/my-orders'
     | '/admin/login'
+    | '/auth/callback'
     | '/order/$id'
     | '/admin/menu'
     | '/admin/orders'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/my-orders'
     | '/admin/login'
+    | '/auth/callback'
     | '/order/$id'
     | '/admin/menu'
     | '/admin/orders'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/my-orders'
     | '/admin/login'
+    | '/auth/callback'
     | '/order/$id'
     | '/_authenticated/admin/menu'
     | '/_authenticated/admin/orders'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   MenuRoute: typeof MenuRoute
   MyOrdersRoute: typeof MyOrdersRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   OrderIdRoute: typeof OrderIdRoute
   ApiPublicRazorpayWebhookRoute: typeof ApiPublicRazorpayWebhookRoute
 }
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/order/$id': {
@@ -337,6 +357,7 @@ const rootRouteChildren: RootRouteChildren = {
   MenuRoute: MenuRoute,
   MyOrdersRoute: MyOrdersRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   OrderIdRoute: OrderIdRoute,
   ApiPublicRazorpayWebhookRoute: ApiPublicRazorpayWebhookRoute,
 }

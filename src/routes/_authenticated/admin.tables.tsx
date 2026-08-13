@@ -49,6 +49,7 @@ function TablesAdmin({ cafeId }: { cafeId: string }) {
       const { data, error } = await supabase
         .from("cafe_tables")
         .select("id, table_number, qr_token, active")
+        .eq("cafe_id", cafeId)
         .order("table_number", { ascending: true });
       if (error) throw error;
       return data as CafeTable[];
@@ -75,7 +76,11 @@ function TablesAdmin({ cafeId }: { cafeId: string }) {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("cafe_tables").update({ active }).eq("id", id);
+      const { error } = await supabase
+        .from("cafe_tables")
+        .update({ active })
+        .eq("id", id)
+        .eq("cafe_id", cafeId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables", cafeId] }),
@@ -89,7 +94,11 @@ function TablesAdmin({ cafeId }: { cafeId: string }) {
       const token = Array.from(bytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const { error } = await supabase.from("cafe_tables").update({ qr_token: token }).eq("id", id);
+      const { error } = await supabase
+        .from("cafe_tables")
+        .update({ qr_token: token })
+        .eq("id", id)
+        .eq("cafe_id", cafeId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -144,6 +153,18 @@ function TablesAdmin({ cafeId }: { cafeId: string }) {
   );
 }
 
+function getPublicBaseUrl() {
+  const configuredUrl =
+    import.meta.env.VITE_PUBLIC_APP_URL ||
+    import.meta.env.VITE_PUBLIC_URL ||
+    import.meta.env.VITE_APP_URL ||
+    (typeof window !== "undefined" && !["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname)
+      ? window.location.origin
+      : "");
+
+  return configuredUrl.replace(/\/$/, "");
+}
+
 function TableCard({
   table,
   onToggle,
@@ -157,9 +178,19 @@ function TableCard({
   const [menuUrl, setMenuUrl] = useState("");
 
   useEffect(() => {
-    const url = `${window.location.origin}/menu?t=${table.qr_token}`;
-    setMenuUrl(url);
-    QRCode.toDataURL(url, { width: 512, margin: 2 })
+    const publicBaseUrl = getPublicBaseUrl();
+    if (!publicBaseUrl) {
+      setMenuUrl("");
+      setDataUrl(null);
+      return;
+    }
+
+    const url = new URL("/menu", publicBaseUrl);
+    url.searchParams.set("t", table.qr_token);
+
+    const qrUrl = url.toString();
+    setMenuUrl(qrUrl);
+    QRCode.toDataURL(qrUrl, { width: 512, margin: 2 })
       .then(setDataUrl)
       .catch(() => setDataUrl(null));
   }, [table.qr_token]);
