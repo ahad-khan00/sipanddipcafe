@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const tokenSchema = z.string().trim().regex(/^[a-f0-9]{16,128}$/i, "Invalid table code");
 const trackingSchema = z.string().trim().regex(/^[a-f0-9]{32,128}$/i, "Invalid tracking code");
@@ -76,7 +76,7 @@ async function signImage(
 export const getMenuByToken = createServerFn({ method: "GET" })
   .inputValidator((input: { token: string }) => ({ token: tokenSchema.parse(input.token) }))
   .handler(async ({ data }): Promise<PublicMenu> => {
-    const { data: table, error: tableError } = await supabase
+    const { data: table, error: tableError } = await supabaseAdmin
       .from("cafe_tables")
       .select("id, table_number, active, cafe_id")
       .eq("qr_token", data.token)
@@ -88,26 +88,26 @@ export const getMenuByToken = createServerFn({ method: "GET" })
 
     const [{ data: cafe }, { data: categories }, { data: items }, { data: summary }, { data: reviews }] =
       await Promise.all([
-        supabase
+        supabaseAdmin
           .from("cafes")
           .select("name, description, currency, tax_rate")
           .eq("id", table.cafe_id)
           .single(),
-        supabase
+          supabaseAdmin
           .from("menu_categories")
           .select("id, name")
           .eq("cafe_id", table.cafe_id)
           .eq("active", true)
           .order("sort_order", { ascending: true }),
-        supabase
+        supabaseAdmin
           .from("menu_items")
           .select("id, category_id, name, description, price_cents, image_url, available")
           .eq("cafe_id", table.cafe_id)
           .eq("active", true)
           .order("sort_order", { ascending: true })
           .order("name", { ascending: true }),
-        supabase.rpc("cafe_rating_summary", { _cafe_id: table.cafe_id }),
-        supabase
+        supabaseAdmin.rpc("cafe_rating_summary", { _cafe_id: table.cafe_id }),
+        supabaseAdmin
           .from("reviews")
           .select("id, rating, comment, display_name, created_at")
           .eq("cafe_id", table.cafe_id)
@@ -122,7 +122,7 @@ export const getMenuByToken = createServerFn({ method: "GET" })
     const withImages = await Promise.all(
       (items ?? []).map(async (item) => ({
         ...item,
-        image_url: await signImage(supabase as never, item.image_url),
+        image_url: await signImage(supabaseAdmin as never, item.image_url),
       })),
     );
 
